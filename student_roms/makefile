@@ -1,9 +1,9 @@
 
 .PHONY: all
 
-all: jp_nz_test.gb
+all: function_add.gb
 
-jp_nz_test.gb: jp_nz_test.asm
-	rgbasm -o main.o jp_nz_test.asm
+function_add.gb: function_add.asm
+	rgbasm -o main.o function_add.asm
 	rgblink -o main.gb main.o
 	rgbfix -v -p 0xFF main.gb
