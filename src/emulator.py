@@ -48,7 +48,7 @@ class Emulator:
         self._isa[0x0A] = lambda: self.ld_r8_mem_r16("a", "bc")
         self._isa[0x12] = lambda: self.ld_mem_r16_r8("de", "a")
         self._isa[0x1A] = lambda: self.ld_r8_mem_r16("a", "de")
-        self._isa[0x22] = lambda: self.ld_mem_r16_r8("hl", "a")
+        #self._isa[0x22] = lambda: self.ld_mem_r16_r8("hl", "a") is actually hli
         self._isa[0x2A] = lambda: self.ld_r8_mem_r16("a", "hl")
 
         self._isa[0x06] = lambda: self.ld_r8_n8("b")
@@ -133,13 +133,13 @@ class Emulator:
         self._isa[0xEA] = self.ld_mem_n16_a
         self._isa[0xFA] = self.ld_a_mem_n16
         
-        self._isa[0X04] = lambda: self.inc_8_bit("b")
-        self._isa[0X0C] = lambda: self.inc_8_bit("c")
-        self._isa[0X14] = lambda: self.inc_8_bit("d")
-        self._isa[0X1C] = lambda: self.inc_8_bit("e")
-        self._isa[0X24] = lambda: self.inc_8_bit("h")
-        self._isa[0X2C] = lambda: self.inc_8_bit("l")
-        self._isa[0x3C] = lambda: self.inc_8_bit("a")
+        self._isa[0X04] = lambda: self.inc_r8("b")
+        self._isa[0X0C] = lambda: self.inc_r8("c")
+        self._isa[0X14] = lambda: self.inc_r8("d")
+        self._isa[0X1C] = lambda: self.inc_r8("e")
+        self._isa[0X24] = lambda: self.inc_r8("h")
+        self._isa[0X2C] = lambda: self.inc_r8("l")
+        self._isa[0x3C] = lambda: self.inc_r8("a")
 
         self._isa[0X05] = lambda: self.dec_8_bit("b")
         self._isa[0X0D] = lambda: self.dec_8_bit("c")
@@ -148,6 +148,18 @@ class Emulator:
         self._isa[0X25] = lambda: self.dec_8_bit("h")
         self._isa[0X2D] = lambda: self.dec_8_bit("l")
         self._isa[0X3D] = lambda: self.dec_8_bit("a")
+
+        self._isa[0X03] = lambda: self.inc_r16("bc")
+        self._isa[0X13] = lambda: self.inc_r16("de")
+        self._isa[0X23] = lambda: self.inc_r16("hl")
+        
+        self._isa[0X0B] = lambda: self.dec_r16("bc")
+        self._isa[0X1B] = lambda: self.dec_r16("de") 
+        self._isa[0X2B] = lambda: self.dec_r16("hl") 
+        
+        self._isa[0X09] = lambda: self.add_r16_r16("hl", "bc")
+        self._isa[0X19] = lambda: self.add_r16_r16("hl", "de")
+        self._isa[0X29] = lambda: self.add_r16_r16("hl", "hl")
 
         self._isa[0XFE] = self.cp_n8
         self._isa[0XB8] = lambda: self.cp_r8("b")
@@ -188,6 +200,186 @@ class Emulator:
         
         self._isa[0XCD] = self.call
         self._isa[0XC9] = self.ret
+
+        self._isa[0XA7] = lambda: self.logic_and("a")
+        self._isa[0XA0] = lambda: self.logic_and("b")
+        self._isa[0XA1] = lambda: self.logic_and("c")
+        self._isa[0XA2] = lambda: self.logic_and("d")
+        self._isa[0XA3] = lambda: self.logic_and("e")
+        self._isa[0XA4] = lambda: self.logic_and("h")
+        self._isa[0XA5] = lambda: self.logic_and("l")
+        self._isa[0XA6] = self.logic_and_mem
+
+        self._isa[0XAF] = lambda: self.logic_xor("a")
+        self._isa[0XA8] = lambda: self.logic_xor("b")
+        self._isa[0XA9] = lambda: self.logic_xor("c")
+        self._isa[0XAA] = lambda: self.logic_xor("d")
+        self._isa[0XAB] = lambda: self.logic_xor("e")
+        self._isa[0XAC] = lambda: self.logic_xor("h")
+        self._isa[0XAD] = lambda: self.logic_xor("l")
+        self._isa[0XAE] = self.logic_xor_mem
+
+        self._isa[0XB7] = lambda: self.logic_or("a")
+        self._isa[0XB0] = lambda: self.logic_or("b")
+        self._isa[0XB1] = lambda: self.logic_or("c")
+        self._isa[0XB2] = lambda: self.logic_or("d")
+        self._isa[0XB3] = lambda: self.logic_or("e")
+        self._isa[0XB4] = lambda: self.logic_or("h")
+        self._isa[0XB5] = lambda: self.logic_or("l")
+        self._isa[0XB6] = self.logic_or_mem
+        
+        self._isa[0XCB40] = lambda: self.bit(0, "b")
+        self._isa[0XCB41] = lambda: self.bit(0, "c")
+        self._isa[0XCB42] = lambda: self.bit(0, "d")
+        self._isa[0XCB43] = lambda: self.bit(0, "e")
+        self._isa[0XCB44] = lambda: self.bit(0, "h")
+        self._isa[0XCB45] = lambda: self.bit(0, "l")
+        self._isa[0XCB46] = lambda: self.bit_mem(0)
+        self._isa[0XCB47] = lambda: self.bit(0, "a")
+
+        self._isa[0XCB48] = lambda: self.bit(1, "b")
+        self._isa[0XCB49] = lambda: self.bit(1, "c")
+        self._isa[0XCB4A] = lambda: self.bit(1, "d")
+        self._isa[0XCB4B] = lambda: self.bit(1, "e")
+        self._isa[0XCB4C] = lambda: self.bit(1, "h")
+        self._isa[0XCB4D] = lambda: self.bit(1, "l")
+        self._isa[0XCB4E] = lambda: self.bit_mem(1)
+        self._isa[0XCB4F] = lambda: self.bit(1, "a")
+
+        self._isa[0XCB50] = lambda: self.bit(2, "b")
+        self._isa[0XCB51] = lambda: self.bit(2, "c")
+        self._isa[0XCB52] = lambda: self.bit(2, "d")
+        self._isa[0XCB53] = lambda: self.bit(2, "e")
+        self._isa[0XCB54] = lambda: self.bit(2, "h")
+        self._isa[0XCB55] = lambda: self.bit(2, "l")
+        self._isa[0XCB56] = lambda: self.bit_mem(2)
+        self._isa[0XCB57] = lambda: self.bit(2, "a")
+
+        self._isa[0XCB58] = lambda: self.bit(3, "b")
+        self._isa[0XCB59] = lambda: self.bit(3, "c")
+        self._isa[0XCB5A] = lambda: self.bit(3, "d")
+        self._isa[0XCB5B] = lambda: self.bit(3, "e")
+        self._isa[0XCB5C] = lambda: self.bit(3, "h")
+        self._isa[0XCB5D] = lambda: self.bit(3, "l")
+        self._isa[0XCB5E] = lambda: self.bit_mem(3)
+        self._isa[0XCB5F] = lambda: self.bit(3, "a")
+
+        self._isa[0XCB60] = lambda: self.bit(4, "b")
+        self._isa[0XCB61] = lambda: self.bit(4, "c")
+        self._isa[0XCB62] = lambda: self.bit(4, "d")
+        self._isa[0XCB63] = lambda: self.bit(4, "e")
+        self._isa[0XCB64] = lambda: self.bit(4, "h")
+        self._isa[0XCB65] = lambda: self.bit(4, "l")
+        self._isa[0XCB66] = lambda: self.bit_mem(4)
+        self._isa[0XCB67] = lambda: self.bit(4, "a")
+
+        self._isa[0XCB68] = lambda: self.bit(5, "b")
+        self._isa[0XCB69] = lambda: self.bit(5, "c")
+        self._isa[0XCB6A] = lambda: self.bit(5, "d")
+        self._isa[0XCB6B] = lambda: self.bit(5, "e")
+        self._isa[0XCB6C] = lambda: self.bit(5, "h")
+        self._isa[0XCB6D] = lambda: self.bit(5, "l")
+        self._isa[0XCB6E] = lambda: self.bit_mem(5)
+        self._isa[0XCB6F] = lambda: self.bit(5, "a")
+
+        self._isa[0XCB70] = lambda: self.bit(6, "b")
+        self._isa[0XCB71] = lambda: self.bit(6, "c")
+        self._isa[0XCB72] = lambda: self.bit(6, "d")
+        self._isa[0XCB73] = lambda: self.bit(6, "e")
+        self._isa[0XCB74] = lambda: self.bit(6, "h")
+        self._isa[0XCB75] = lambda: self.bit(6, "l")
+        self._isa[0XCB76] = lambda: self.bit_mem(6)
+        self._isa[0XCB77] = lambda: self.bit(6, "a")
+
+        self._isa[0XCB78] = lambda: self.bit(7, "b")
+        self._isa[0XCB79] = lambda: self.bit(7, "c")
+        self._isa[0XCB7A] = lambda: self.bit(7, "d")
+        self._isa[0XCB7B] = lambda: self.bit(7, "e")
+        self._isa[0XCB7C] = lambda: self.bit(7, "h")
+        self._isa[0XCB7D] = lambda: self.bit(7, "l")
+        self._isa[0XCB7E] = lambda: self.bit_mem(7)
+        self._isa[0XCB7F] = lambda: self.bit(7, "a")
+
+        self._isa[0XCBC0] = lambda: self.set(0, "b")
+        self._isa[0XCBC1] = lambda: self.set(0, "c")
+        self._isa[0XCBC2] = lambda: self.set(0, "d")
+        self._isa[0XCBC3] = lambda: self.set(0, "e")
+        self._isa[0XCBC4] = lambda: self.set(0, "h")
+        self._isa[0XCBC5] = lambda: self.set(0, "l")
+        self._isa[0XCBC6] = lambda: self.set_mem(0)
+        self._isa[0XCBC7] = lambda: self.set(0, "a")
+
+        self._isa[0XCBC8] = lambda: self.set(1, "b")
+        self._isa[0XCBC9] = lambda: self.set(1, "c")
+        self._isa[0XCBCA] = lambda: self.set(1, "d")
+        self._isa[0XCBCB] = lambda: self.set(1, "e")
+        self._isa[0XCBCC] = lambda: self.set(1, "h")
+        self._isa[0XCBCD] = lambda: self.set(1, "l")
+        self._isa[0XCBCE] = lambda: self.set_mem(1)
+        self._isa[0XCBCF] = lambda: self.set(1, "a")
+
+        self._isa[0XCBD0] = lambda: self.set(2, "b")
+        self._isa[0XCBD1] = lambda: self.set(2, "c")
+        self._isa[0XCBD2] = lambda: self.set(2, "d")
+        self._isa[0XCBD3] = lambda: self.set(2, "e")
+        self._isa[0XCBD4] = lambda: self.set(2, "h")
+        self._isa[0XCBD5] = lambda: self.set(2, "l")
+        self._isa[0XCBD6] = lambda: self.set_mem(2)
+        self._isa[0XCBD7] = lambda: self.set(2, "a")
+
+        self._isa[0XCBD8] = lambda: self.set(3, "b")
+        self._isa[0XCBD9] = lambda: self.set(3, "c")
+        self._isa[0XCBDA] = lambda: self.set(3, "d")
+        self._isa[0XCBDB] = lambda: self.set(3, "e")
+        self._isa[0XCBDC] = lambda: self.set(3, "h")
+        self._isa[0XCBDD] = lambda: self.set(3, "l")
+        self._isa[0XCBDE] = lambda: self.set_mem(3)
+        self._isa[0XCBDF] = lambda: self.set(3, "a")
+
+        self._isa[0XCBE0] = lambda: self.set(4, "b")
+        self._isa[0XCBE1] = lambda: self.set(4, "c")
+        self._isa[0XCBE2] = lambda: self.set(4, "d")
+        self._isa[0XCBE3] = lambda: self.set(4, "e")
+        self._isa[0XCBE4] = lambda: self.set(4, "h")
+        self._isa[0XCBE5] = lambda: self.set(4, "l")
+        self._isa[0XCBE6] = lambda: self.set_mem(4)
+        self._isa[0XCBE7] = lambda: self.set(4, "a")
+
+        self._isa[0XCBE8] = lambda: self.set(5, "b")
+        self._isa[0XCBE9] = lambda: self.set(5, "c")
+        self._isa[0XCBEA] = lambda: self.set(5, "d")
+        self._isa[0XCBEB] = lambda: self.set(5, "e")
+        self._isa[0XCBEC] = lambda: self.set(5, "h")
+        self._isa[0XCBED] = lambda: self.set(5, "l")
+        self._isa[0XCBEE] = lambda: self.set_mem(5)
+        self._isa[0XCBEF] = lambda: self.set(5, "a")
+
+        self._isa[0XCBF0] = lambda: self.set(6, "b")
+        self._isa[0XCBF1] = lambda: self.set(6, "c")
+        self._isa[0XCBF2] = lambda: self.set(6, "d")
+        self._isa[0XCBF3] = lambda: self.set(6, "e")
+        self._isa[0XCBF4] = lambda: self.set(6, "h")
+        self._isa[0XCBF5] = lambda: self.set(6, "l")
+        self._isa[0XCBF6] = lambda: self.set_mem(6)
+        self._isa[0XCBF7] = lambda: self.set(6, "a")
+
+        self._isa[0XCBF8] = lambda: self.set(7, "b")
+        self._isa[0XCBF9] = lambda: self.set(7, "c")
+        self._isa[0XCBFA] = lambda: self.set(7, "d")
+        self._isa[0XCBFB] = lambda: self.set(7, "e")
+        self._isa[0XCBFC] = lambda: self.set(7, "h")
+        self._isa[0XCBFD] = lambda: self.set(7, "l")
+        self._isa[0XCBFE] = lambda: self.set_mem(7)
+        self._isa[0XCBFF] = lambda: self.set(7, "a")
+
+        self._isa[0XCB38] = lambda: self.srl("b")
+        self._isa[0XCB39] = lambda: self.srl("c")
+        self._isa[0XCB3A] = lambda: self.srl("d")
+        self._isa[0XCB3B] = lambda: self.srl("e")
+        self._isa[0XCB3C] = lambda: self.srl("h")
+        self._isa[0XCB3D] = lambda: self.srl("l")
+        self._isa[0XCB3E] = self.srl_mem
+        self._isa[0XCB3F] = lambda: self.srl("a")
 
     def run(self) -> None:
         while True:
@@ -257,7 +449,7 @@ class Emulator:
         return (self._regs["f"] & 0B00010000) != 0
     
     def get_16_bit_reg_val(self, reg:str) -> int:
-        return self._isa[reg[0]] << 8 | self._isa[reg[1]]
+        return self._regs[reg[0]] << 8 | self._regs[reg[1]]
     
     def convert_16_val_to_two_8_bit_vals(self, val: int) -> tuple[int, int]:
         val_0 = val >> 8
@@ -286,10 +478,10 @@ class Emulator:
         self._regs["pc"] = new_address
 
     def ld_r8_n8(self, reg: str) -> None:
-        instr = self.fetch_operands(1)
+        val = self.fetch_operands(1)
         if self._verbose:
             print(f"ld {reg}, n8")
-        self._regs[reg] = instr[0]
+        self._regs[reg] = val[0]
 
     def ld_mem_n16_a(self) -> None:
         instr = self.fetch_operands(2)
@@ -307,32 +499,32 @@ class Emulator:
 
     def ld_r8_r8(self, reg_1: str, reg_2: str) -> None:
         if self._verbose:
-            print("ld r8, r8")
+            print(f"ld {reg_1}, {reg_2}")
         self._regs[reg_1] = self._regs[reg_2]
 
     def ld_r8_mem_r16(self, reg_8: str, reg_16: str) -> None:
         if self._verbose:
-            print("ld r8, [r16]")
+            print(f"ld {reg_8}, [{reg_16}]")
         addr = self.get_16_bit_reg_val(reg_16)
         self._regs[reg_8] = self._mem[addr]
         
     def ld_mem_r16_r8(self, reg_16: str, reg_8: str) -> None:
         if self._verbose:
-            print("ld [r16], r8")
+            print(f"ld [{reg_16}], {reg_8}")
         addr = self.get_16_bit_reg_val(reg_16)
-        self._mem[addr] = self._reg[reg_8]
+        self._mem[addr] = self._regs[reg_8]
 
     def ld_r16_n16(self, reg: str):
         if self._verbose:
-            print("ld [r16], r16")
+            print(f"ld [{reg}], n16")
         val = self.fetch_operands(2)
-        val_0, val_1 = self.convert_16_val_to_two_8_bit_vals(val)
+        val_1, val_0 = val
         reg_0 = reg[0]
         reg_1 = reg[1]
-        self._reg[reg_0] = val_0
-        self._reg[reg_1] = val_1
+        self._regs[reg_0] = val_0
+        self._regs[reg_1] = val_1
 
-    def inc_8_bit(self, reg: str) -> None:
+    def inc_r8(self, reg: str) -> None:
         if self._verbose:
             print(f"inc {reg}")
         self._regs[reg] += 1
@@ -342,7 +534,7 @@ class Emulator:
             self.set_z()
         else:
             self.unset_c()
-            self.unset_z()    
+            self.unset_z()
 
     def dec_8_bit(self, reg: str) -> None:
         if self._verbose:
@@ -358,6 +550,30 @@ class Emulator:
         else:
             self.unset_c()
             self.unset_z()
+            
+    def inc_r16(self, reg_16: str) -> None:
+        if self._verbose:
+            print(f"inc {reg_16}")
+        val = self.get_16_bit_reg_val(reg_16) 
+        val += 1
+        val %= 0x10000
+        val_0, val_1 = self.convert_16_val_to_two_8_bit_vals(val)
+        reg_0 = reg_16[0]
+        reg_1 = reg_16[1]
+        self._regs[reg_0] = val_0
+        self._regs[reg_1] = val_1
+        
+    def dec_r16(self, reg_16: str) -> None:
+        if self._verbose:
+            print(f"dec {reg_16}")
+        val = self.get_16_bit_reg_val(reg_16)
+        val -= 1
+        val %= 0X10000
+        val_0, val_1 = self.convert_16_val_to_two_8_bit_vals(val)
+        reg_0 = reg_16[0]
+        reg_1 = reg_16[1]
+        self._regs[reg_0] = val_0
+        self._regs[reg_1] = val_1
 
     def cp_n8(self) -> None:
         instr = self.fetch_operands(1)
@@ -375,7 +591,7 @@ class Emulator:
 
     def cp_r8(self, reg: str):
         if self._verbose:
-            print("cp", reg)
+            print(f"cp {reg}")
         if self._regs["a"] == self._regs[reg]:
             self.set_z()
             self.unset_c()
@@ -412,7 +628,7 @@ class Emulator:
 
     def add_a_r8(self, reg: str) -> None:
         if (self._verbose):
-            print(f"add_a_{reg}")
+            print(f"add a, {reg}")
         new_a = self._regs["a"] + self._regs[reg]
         if (new_a == 256):
             self._regs["a"] = 0
@@ -429,7 +645,7 @@ class Emulator:
 
     def add_a_mem_hl(self) -> None:
         if (self._verbose):
-            print("add_a_mem_hl")
+            print("add a, [hl]")
         new_a = self._regs["a"] + self._mem[self.get_16_bit_reg_val("hl")]
         if (new_a == 256):
             self._regs["a"] = 0
@@ -446,7 +662,7 @@ class Emulator:
 
     def add_a_n8(self) -> None:
         if (self._verbose):
-            print(f"add_a_n8")
+            print(f"add a, n8")
         instr = self.fetch_operands(1)
         new_a = self._regs["a"] + instr[0]
         if (new_a == 256):
@@ -463,6 +679,8 @@ class Emulator:
             self.unset_c()
             
     def sub_a_r8(self, reg:str) -> None:
+        if (self._verbose):
+            print(f"sub a, {reg}")
         new_a = self._regs["a"] - self._regs[reg]
         if (new_a == 0):
             self._regs["a"] = 0
@@ -478,6 +696,8 @@ class Emulator:
             self.unset_z()
 
     def sub_a_mem_hl(self) -> None:
+        if (self._verbose):
+            print(f"sub a, [hl]")
         new_a = self._regs["a"] - self._mem[self.get_16_bit_reg_val("hl")]
         if (new_a == 0):
             self._regs["a"] = 0
@@ -493,6 +713,8 @@ class Emulator:
             self.unset_z()
 
     def sub_a_n8(self) -> None:
+        if (self._verbose):
+            print(f"sub a, n8")
         instr = self.fetch_operands(1)
         new_a = self._regs["a"] - instr[0]
         if (new_a == 0):
@@ -508,13 +730,29 @@ class Emulator:
             self.unset_c()
             self.unset_z()
 
-        
+    def add_r16_r16(self, reg_1: str, reg_2: str) -> None:
+        if self._verbose:
+            print(f"add {reg_1}, {reg_2}")
+        val_1 = self.get_16_bit_reg_val(reg_1)
+        val_2 = self.get_16_bit_reg_val(reg_2)
+        val = val_1 + val_2
+        if (val > 0XFFFF):
+            self.set_c()
+            val %= 0x10000
+        else:
+            self.unset_c()
+        self._regs[reg_1[0]], self._regs[reg_1[1]] = self.convert_16_val_to_two_8_bit_vals(val)
+    
     def push_r16(self, reg:str) -> None:
+        if (self._verbose):
+            print(f"push {reg}")
         self._mem[self._regs["sp"]] -= 2
         self._mem[self._regs["sp"]] = self.regs_[reg[1]]
         self._mem[self._regs["sp"] + 1] = self.regs_[reg[0]]
 
     def pop_r16(self, reg:str) -> None:
+        if (self._verbose):
+            print(f"pop {reg}")        
         self._regs[str[1]] = self._mem[self._regs["sp"]]
         self._regs[str[0]] = self._mem[self._regs["sp"] + 1]
         self._regs["sp"] += 2
@@ -531,9 +769,136 @@ class Emulator:
         self._regs["pc"] = new_address
 
     def ret(self) -> None:
+        if (self._verbose):
+            print("ret")
         self._regs["pc"] = self.to_little([self._mem[self._regs["sp"]], self._mem[self._regs["sp"] + 1]])
-        print(self._regs["pc"])
         self._regs["sp"] += 2
+
+    def logic_and(self, reg: str) -> None:
+        if (self._verbose):
+            print(f"and a, {reg}")
+        self._regs["a"] = self._regs["a"] & self._regs[reg]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+        
+    def logic_and_mem(self) -> None:
+        if (self._verbose):
+            print("and a, [hl]")
+        self._regs["a"] = self._regs["a"] & self._mem[self.get_16_bit_reg_val("hl")]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def logic_or(self, reg: str) -> None:
+        if (self._verbose):
+            print(f"or a, {reg}")
+        self._regs["a"] = self._regs["a"] | self._regs[reg]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def logic_or_mem(self) -> None:
+        if (self._verbose):
+            print("or a, [hl]")
+        self._regs["a"] = self._regs["a"] | self._mem[self.get_16_bit_reg_val("hl")]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def logic_xor(self, reg: str) -> None:
+        if (self._verbose):
+            print(f"xor a, {reg}")
+        self._regs["a"] = self._regs["a"] ^ self.regs[reg]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def logic_xor_mem(self) -> None:
+        if (self._verbose):
+            print("xor a, [hl]")
+        self._regs["a"] = self._regs["a"] ^ self._mem[self.get_16_bit_reg_val("hl")]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def bit(self, position: int, reg: str) -> None:
+        if (self._verbose):
+            print(f"bit {position}, {reg}")
+        value = self._regs[reg] >> position
+        if (value % 2 == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def bit_mem(self, position: int) -> None:
+        if (self._verbose):
+            print(f"bit {position}, [hl]")
+        value = self._mem[self.get_16_bit_reg_val("hl")] >> position
+        if (value % 2 == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+            
+    def set(self, position: int, reg: str) -> None:
+        if (self._verbose):
+            print(f"set {position}, {reg}")
+        value = 1 << position
+        self._regs[reg] = self._regs[reg] | value
+        if (self._regs[reg] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def set_mem(self, position: int) -> None:
+        if (self._verbose):
+            print(f"set {position}, [hl]")
+        value = 1 << position
+        address = self.get_16_bit_reg_val("hl")
+        self.mem[address] = self._mem[address] | value
+        if (self._mem[address] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def srl(self, reg: str) -> None:
+        if(self._verbose):
+            print(f"srl {reg}")
+        if (self._regs[reg] == 1):
+            self.set_c()
+        else:
+            self.unset_c()
+        self._regs[reg] = self._regs[reg] >> 1
+        if (self._regs[reg] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def srl_mem(self) -> None:
+        if(self._verbose):
+            print(f"srl [hl]")
+        address = self.get_16_bit_reg_val("hl")
+        if (self._mem[address] == 1):
+            self.set_c()
+        else:
+            self.unset_c()
+        self._mem[address] = self._mem[address] >> 1
+        if (self._mem[address] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
 
 
 def read_rom(file_name: str, verbose: bool = False) -> list[int]:

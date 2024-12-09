@@ -5,11 +5,12 @@ entrypoint:
     ds ($0150 - @), 0
 
 main:
-    ld d, 100
-    ld a, d
+    ld hl, $FFFF
+    ld bc, 10
+    dec bc
+    inc hl
     call add_nums
-    xor a
+    swap a
 
 add_nums:
-    add a, d
     ret
