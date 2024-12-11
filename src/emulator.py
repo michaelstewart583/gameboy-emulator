@@ -34,6 +34,8 @@ class Emulator:
         self._isa[0xF3] = self.disable_interrupts
         self._isa[0xFB] = self.enable_interrupts
 
+        self._isa[0x00] = self.nop
+
         self._isa[0xC3] = self.jump
         self._isa[0xC2] = self.jp_nz_n16
         self._isa[0xCA] = self.jp_z_n16
@@ -48,8 +50,8 @@ class Emulator:
         self._isa[0x0A] = lambda: self.ld_r8_mem_r16("a", "bc")
         self._isa[0x12] = lambda: self.ld_mem_r16_r8("de", "a")
         self._isa[0x1A] = lambda: self.ld_r8_mem_r16("a", "de")
-        #self._isa[0x22] = lambda: self.ld_mem_r16_r8("hl", "a") is actually hli
-        self._isa[0x2A] = lambda: self.ld_r8_mem_r16("a", "hl")
+        self._isa[0x22] = self.ld_mem_hli_a
+        self._isa[0x2A] = self.ld_a_mem_hli
 
         self._isa[0x06] = lambda: self.ld_r8_n8("b")
         self._isa[0x0E] = lambda: self.ld_r8_n8("c")
@@ -119,7 +121,9 @@ class Emulator:
         self._isa[0x73] = lambda: self.ld_mem_r16_r8("hl", "e")  
         self._isa[0x74] = lambda: self.ld_mem_r16_r8("hl", "h")  
         self._isa[0x75] = lambda: self.ld_mem_r16_r8("hl", "l")  
-        self._isa[0x77] = lambda: self.ld_mem_r16_r8("hl", "a")  
+        self._isa[0x77] = lambda: self.ld_mem_r16_r8("hl", "a")
+
+        self._isa[0X36] = self.ld_mem_hl_n8
  
         self._isa[0x78] = lambda: self.ld_r8_r8("a", "b") 
         self._isa[0x79] = lambda: self.ld_r8_r8("a", "c") 
@@ -430,6 +434,10 @@ class Emulator:
         assert len(operands) == 2
         return operands[1] << 8 | operands[0]
     
+    def nop(self) -> None:
+        if self._verbose:
+            print("nop")
+    
     def set_z(self) -> None:
         self._regs["f"] = self._regs["f"] | 0B10000000
 
@@ -513,6 +521,32 @@ class Emulator:
             print(f"ld [{reg_16}], {reg_8}")
         addr = self.get_16_bit_reg_val(reg_16)
         self._mem[addr] = self._regs[reg_8]
+    
+    def ld_mem_hl_n8(self) -> None:
+        val = self.fetch_operands(1)
+        addr = self.get_16_bit_reg_val("hl")
+        self._mem[addr] = val[0]
+
+    def ld_mem_hli_a(self) -> None:
+        if self._verbose:
+            print(f"ld [hli], a")
+        addr = self.get_16_bit_reg_val("hl")
+        self._mem[addr] = self._regs["a"]
+        addr += 1
+        reg_h, reg_l = self.convert_16_val_to_two_8_bit_vals(addr)
+        self._regs["h"] = reg_h
+        self._regs["l"] = reg_l
+
+    def ld_a_mem_hli(self):
+        if self._verbose:
+            print(f"ld [hli], a")
+        addr = self.get_16_bit_reg_val("hl")
+        self._regs["a"] = self._mem[addr]
+        addr += 1
+        reg_h, reg_l = self.convert_16_val_to_two_8_bit_vals(addr)
+        self._regs["h"] = reg_h
+        self._regs["l"] = reg_l
+
 
     def ld_r16_n16(self, reg: str):
         if self._verbose:
@@ -747,14 +781,14 @@ class Emulator:
         if (self._verbose):
             print(f"push {reg}")
         self._mem[self._regs["sp"]] -= 2
-        self._mem[self._regs["sp"]] = self.regs_[reg[1]]
-        self._mem[self._regs["sp"] + 1] = self.regs_[reg[0]]
+        self._mem[self._regs["sp"]] = self._regs[reg[1]]
+        self._mem[self._regs["sp"] + 1] = self._regs[reg[0]]
 
     def pop_r16(self, reg:str) -> None:
         if (self._verbose):
             print(f"pop {reg}")        
-        self._regs[str[1]] = self._mem[self._regs["sp"]]
-        self._regs[str[0]] = self._mem[self._regs["sp"] + 1]
+        self._regs[reg[1]] = self._mem[self._regs["sp"]]
+        self._regs[reg[0]] = self._mem[self._regs["sp"] + 1]
         self._regs["sp"] += 2
 
     def call(self) -> None:
@@ -817,7 +851,7 @@ class Emulator:
     def logic_xor(self, reg: str) -> None:
         if (self._verbose):
             print(f"xor a, {reg}")
-        self._regs["a"] = self._regs["a"] ^ self.regs[reg]
+        self._regs["a"] = self._regs["a"] ^ self._regs[reg]
         self.unset_c()
         if (self._regs["a"] == 0):
             self.set_z()
