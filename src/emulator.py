@@ -42,6 +42,8 @@ class Emulator:
         self._isa[0xD2] = self.jp_nc_n16
         self._isa[0xDA] = self.jp_c_n16
 
+        self._isa[0X20] = self.jr_nz
+
         self._isa[0x01] = lambda: self.ld_r16_n16("bc")
         self._isa[0x11] = lambda: self.ld_r16_n16("de")
         self._isa[0x21] = lambda: self.ld_r16_n16("hl")
@@ -161,9 +163,9 @@ class Emulator:
         self._isa[0X1B] = lambda: self.dec_r16("de") 
         self._isa[0X2B] = lambda: self.dec_r16("hl") 
         
-        self._isa[0X09] = lambda: self.add_r16_r16("hl", "bc")
-        self._isa[0X19] = lambda: self.add_r16_r16("hl", "de")
-        self._isa[0X29] = lambda: self.add_r16_r16("hl", "hl")
+        self._isa[0X09] = lambda: self.add_hl_r16("hl", "bc")
+        self._isa[0X19] = lambda: self.add_hl_r16("hl", "de")
+        self._isa[0X29] = lambda: self.add_hl_r16("hl", "hl")
 
         self._isa[0XFE] = self.cp_n8
         self._isa[0XB8] = lambda: self.cp_r8("b")
@@ -172,7 +174,8 @@ class Emulator:
         self._isa[0XBB] = lambda: self.cp_r8("e")
         self._isa[0XBC] = lambda: self.cp_r8("h")
         self._isa[0XBD] = lambda: self.cp_r8("l")
-        self._isa[0XBD] = lambda: self.cp_r8("a")
+        self._isa[0XBE] = self.cp_mem_hl
+        self._isa[0XBF] = lambda: self.cp_r8("a")
 
         self._isa[0X87] = lambda: self.add_a_r8("a")
         self._isa[0X80] = lambda: self.add_a_r8("b")
@@ -192,15 +195,17 @@ class Emulator:
         self._isa[0X94] = lambda: self.sub_a_r8("h")
         self._isa[0X95] = lambda: self.sub_a_r8("l")
         self._isa[0X96] = self.sub_a_mem_hl
-        self._isa[0XD4] = self.sub_a_n8
+        self._isa[0XD6] = self.sub_a_n8
 
         self._isa[0XC5] = lambda: self.push_r16("bc")
         self._isa[0XD5] = lambda: self.push_r16("de")
         self._isa[0XE5] = lambda: self.push_r16("hl")
+        self._isa[0xF5] = lambda: self.push_r16("af")
 
         self._isa[0XC1] = lambda: self.pop_r16("bc")
         self._isa[0XD1] = lambda: self.pop_r16("de")
         self._isa[0XE1] = lambda: self.pop_r16("hl")
+        self._isa[0XF1] = lambda: self.pop_r16("af")
         
         self._isa[0XCD] = self.call
         self._isa[0XC9] = self.ret
@@ -385,6 +390,47 @@ class Emulator:
         self._isa[0XCB3E] = self.srl_mem
         self._isa[0XCB3F] = lambda: self.srl("a")
 
+        self._isa[0XF8] = self.ld_hl_sp
+        self._isa[0XF9] = self.ld_sp_hl
+        self._isa[0X08] = self.ld_mem_n16_sp
+        self._isa[0X31] = self.ld_sp_n16
+        self._isa[0X33] = self.inc_sp
+        self._isa[0X39] = self.add_hl_sp
+        self._isa[0X3B] = self.dec_sp
+
+        self._isa[0X88] = lambda: self.adc_a_r8('b')
+        self._isa[0X89] = lambda: self.adc_a_r8('c')
+        self._isa[0X8A] = lambda: self.adc_a_r8('d')
+        self._isa[0X8B] = lambda: self.adc_a_r8('e')
+        self._isa[0X8C] = lambda: self.adc_a_r8('h')
+        self._isa[0X8D] = lambda: self.adc_a_r8('l')
+        self._isa[0X8E] = self.adc_a_mem_hl
+        self._isa[0X8F] = lambda: self.adc_a_r8('a')
+
+        self._isa[0XC4] = self.call_nz
+        self._isa[0XCC] = self.call_z
+        self._isa[0XD4] = self.call_nc
+        self._isa[0XDC] = self.call_c
+
+        self._isa[0XE6] = self.logic_and_n8
+        self._isa[0XEE] = self.logic_xor_n8
+        self._isa[0XF6] = self.logic_or_n8
+
+        self._isa[0XCB30] = lambda: self.swap("b")
+        self._isa[0XCB31] = lambda: self.swap("c")
+        self._isa[0XCB32] = lambda: self.swap("d")
+        self._isa[0XCB33] = lambda: self.swap("e")
+        self._isa[0XCB34] = lambda: self.swap("h")
+        self._isa[0XCB35] = lambda: self.swap("l")
+        self._isa[0XCB36] = self.swap_mem_hl
+        self._isa[0XCB37] = lambda: self.swap("a")
+
+        self._isa[0X18] = self.jr
+        self._isa[0X20] = self.jr_nz
+        self._isa[0X28] = self.jr_z
+        self._isa[0X30] = self.jr_nc
+        self._isa[0X38] = self.jr_c
+            
     def run(self) -> None:
         while True:
             opcode = self.fetch()
@@ -398,6 +444,9 @@ class Emulator:
         return self._isa[opcode]
 
     def fetch(self) -> int:
+        print()
+        print(self._regs["a"])
+        print()
         pc = self._regs["pc"]
 
         if self._verbose:
@@ -463,6 +512,12 @@ class Emulator:
         val_0 = val >> 8
         val_1 = val & 0XFF
         return val_0, val_1
+    
+    def convert_unsigned_to_signed(self, val: int) -> int:
+        if (val < 128):
+            return val
+        else:
+            return val - 256
 
     def disable_interrupts(self):
         instr = self.fetch_operands(0)
@@ -484,6 +539,49 @@ class Emulator:
         if self._verbose:
             print("{0:04X}".format(new_address))
         self._regs["pc"] = new_address
+
+    def jr(self) -> None:
+        if (self._verbose):
+            print("jr")
+        instr = self.fetch_operands(1)
+        offset = self.convert_unsigned_to_signed(instr[0])
+        self._regs["pc"] = offset + self._regs["pc"]
+
+    def jr_nz(self) -> None:
+        if (self._verbose):
+            print("jr nz")
+        instr = self.fetch_operands(1)
+        if (self.z_is_set()):
+            return
+        offset = self.convert_unsigned_to_signed(instr[0])
+        self._regs["pc"] = offset + self._regs["pc"]
+    
+    def jr_z(self) -> None:
+        if (self._verbose):
+            print("jr z")
+        instr = self.fetch_operands(1)
+        if (not self.z_is_set()):
+            return
+        offset = self.convert_unsigned_to_signed(instr[0])
+        self._regs["pc"] = offset + self._regs["pc"]
+
+    def jr_nc(self) -> None:
+        if (self._verbose):
+            print("jr nc")
+        instr = self.fetch_operands(1)
+        if (self.c_is_set()):
+            return
+        offset = self.convert_unsigned_to_signed(instr[0])
+        self._regs["pc"] = offset + self._regs["pc"]
+
+    def jr_c(self) -> None:
+        if (self._verbose):
+            print("jr c")
+        instr = self.fetch_operands(1)
+        if (not self.c_is_set()):
+            return
+        offset = self.convert_unsigned_to_signed(instr[0])
+        self._regs["pc"] = offset + self._regs["pc"]
 
     def ld_r8_n8(self, reg: str) -> None:
         val = self.fetch_operands(1)
@@ -523,9 +621,58 @@ class Emulator:
         self._mem[addr] = self._regs[reg_8]
     
     def ld_mem_hl_n8(self) -> None:
+        if self._verbose:
+            print("ld [hl], n8")
         val = self.fetch_operands(1)
         addr = self.get_16_bit_reg_val("hl")
         self._mem[addr] = val[0]
+
+    def ld_hl_sp(self) -> None:
+        if (self._verbose):
+            print("ld hl, sp")
+        reg_h, reg_l = self.convert_16_val_to_two_8_bit_vals(self._regs["sp"])
+        self._regs["h"] = reg_h
+        self._regs["l"] = reg_l
+
+    def ld_sp_hl(self) -> None:
+        if (self._verbose):
+            print("ld sp, hl")
+        self._regs["sp"] = self.get_16_bit_reg_val("hl")
+
+    def ld_mem_n16_sp(self) -> None:
+        if (self._verbose):
+            print("ld [n16], sp")
+        instr = self.fetch_operands(2)
+        self._mem[self.to_little(instr)] = self._regs["sp"]
+        
+    def ld_sp_n16(self) -> None:
+        if self._verbose:
+            print("ld sp, n16")
+        val = self.fetch_operands(2)
+        self._regs["sp"] = self.to_little(val)
+
+    def inc_sp(self):
+        if self._verbose:
+            print("inc sp")
+        self._regs["sp"] += 1
+
+    def dec_sp(self):
+        if self._verbose:
+            print("dec sp")
+        self._regs["sp"] -= 1
+    
+    def add_hl_sp(self):
+        if self._verbose:
+            print(f"add hl, ")
+        val_1 = self.get_16_bit_reg_val("hl")
+        val_2 = self.get_16_bit_reg_val("sp")
+        val = val_1 + val_2
+        if (val > 0XFFFF):
+            self.set_c()
+            val %= 0x10000
+        else:
+            self.unset_c()
+        self._regs["h"], self._regs["l"] = self.convert_16_val_to_two_8_bit_vals(val)
 
     def ld_mem_hli_a(self) -> None:
         if self._verbose:
@@ -533,19 +680,15 @@ class Emulator:
         addr = self.get_16_bit_reg_val("hl")
         self._mem[addr] = self._regs["a"]
         addr += 1
-        reg_h, reg_l = self.convert_16_val_to_two_8_bit_vals(addr)
-        self._regs["h"] = reg_h
-        self._regs["l"] = reg_l
+        self.inc_r16("hl")
 
     def ld_a_mem_hli(self):
         if self._verbose:
-            print(f"ld [hli], a")
+            print(f"ld a, [hli]")
         addr = self.get_16_bit_reg_val("hl")
         self._regs["a"] = self._mem[addr]
         addr += 1
-        reg_h, reg_l = self.convert_16_val_to_two_8_bit_vals(addr)
-        self._regs["h"] = reg_h
-        self._regs["l"] = reg_l
+        self.inc_r16("hl")
 
 
     def ld_r16_n16(self, reg: str):
@@ -623,7 +766,7 @@ class Emulator:
             self.unset_c()
             self.unset_z()
 
-    def cp_r8(self, reg: str):
+    def cp_r8(self, reg: str) -> None:
         if self._verbose:
             print(f"cp {reg}")
         if self._regs["a"] == self._regs[reg]:
@@ -636,29 +779,52 @@ class Emulator:
             self.unset_z()
             self.set_c()
 
+    def cp_mem_hl(self) -> None:
+        if (self._verbose):
+            print("cp [hl]")
+        addr = self.get_16_bit_reg_val("hl")
+        if self._regs["a"] == self._mem[addr]:
+            self.set_z()
+            self.unset_c()
+        elif self._regs["a"] > self._mem[addr]:
+            self.unset_z()
+            self.unset_c()
+        else:
+            self.unset_z()
+            self.set_c()
+
+
     def jp_nz_n16(self) -> None:
         if (self._verbose):
             print("jp nz, n16")
         if (not self.z_is_set()):
             self.jump()
+        else:
+            self.fetch_operands(2)
 
     def jp_z_n16(self) -> None:
         if (self._verbose):
             print("jp z, n16")
         if (self.z_is_set()):
             self.jump()
+        else:
+            self.fetch_operands(2)
 
     def jp_c_n16(self) -> None:
         if (self._verbose):
             print("jp c, n16")
         if (self.c_is_set()):
             self.jump()
+        else:
+            self.fetch_operands(2)
 
     def jp_nc_n16(self) -> None:
         if (self._verbose):
             print("jp nc, n16")
         if (not self.c_is_set()):
             self.jump()
+        else:
+            self.fetch_operands(2)
 
     def add_a_r8(self, reg: str) -> None:
         if (self._verbose):
@@ -699,6 +865,42 @@ class Emulator:
             print(f"add a, n8")
         instr = self.fetch_operands(1)
         new_a = self._regs["a"] + instr[0]
+        if (new_a == 256):
+            self._regs["a"] = 0
+            self.set_z()
+            self.unset_c()
+        elif (new_a > 256):
+            self._regs["a"] = new_a % 256
+            self.set_c()
+            self.unset_z()
+        else:
+            self._regs["a"] = new_a
+            self.unset_z()
+            self.unset_c()
+
+    def adc_a_r8(self, reg: str) -> None:
+        if (self._verbose):
+            print(f"adc a, {reg}")
+        val = self._regs[reg]
+        new_a = self._regs["a"] + val + self.c_is_set()
+        if (new_a == 256):
+            self._regs["a"] = 0
+            self.set_z()
+            self.unset_c()
+        elif (new_a > 256):
+            self._regs["a"] = new_a % 256
+            self.set_c()
+            self.unset_z()
+        else:
+            self._regs["a"] = new_a
+            self.unset_z()
+            self.unset_c()
+
+    def adc_a_mem_hl(self) -> None:
+        if (self._verbose):
+            print("add a, [hl]")
+        addr = self.gget_16_bit_reg_val("hl")
+        new_a = self._regs["a"] + self._mem[addr] + self.c_is_set()
         if (new_a == 256):
             self._regs["a"] = 0
             self.set_z()
@@ -764,7 +966,7 @@ class Emulator:
             self.unset_c()
             self.unset_z()
 
-    def add_r16_r16(self, reg_1: str, reg_2: str) -> None:
+    def add_hl_r16(self, reg_1: str, reg_2: str) -> None:
         if self._verbose:
             print(f"add {reg_1}, {reg_2}")
         val_1 = self.get_16_bit_reg_val(reg_1)
@@ -780,7 +982,7 @@ class Emulator:
     def push_r16(self, reg:str) -> None:
         if (self._verbose):
             print(f"push {reg}")
-        self._mem[self._regs["sp"]] -= 2
+        self._regs["sp"] -= 2
         self._mem[self._regs["sp"]] = self._regs[reg[1]]
         self._mem[self._regs["sp"] + 1] = self._regs[reg[0]]
 
@@ -802,6 +1004,34 @@ class Emulator:
         self._mem[self._regs["sp"] + 1] = pc_0
         self._regs["pc"] = new_address
 
+    def call_z(self) -> None:
+        if (self._verbose):
+            print("call z")
+        if (not self.z_is_set()):
+            return
+        self.call()
+
+    def call_nz(self) -> None:
+        if (self._verbose):
+            print("call nz")
+        if (self.z_is_set()):
+            return
+        self.call()
+
+    def call_c(self) -> None:
+        if (self._verbose):
+            print("call c")
+        if (not self.c_is_set()):
+            return
+        self.call()
+
+    def call_nc(self) -> None:
+        if (self._verbose):
+            print("call nc")
+        if (self.c_is_set()):
+            return
+        self.call()
+
     def ret(self) -> None:
         if (self._verbose):
             print("ret")
@@ -812,6 +1042,17 @@ class Emulator:
         if (self._verbose):
             print(f"and a, {reg}")
         self._regs["a"] = self._regs["a"] & self._regs[reg]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def logic_and_n8(self) -> None:
+        if (self._verbose):
+            print("and n8")
+        instr = self.fetch_operands(1)
+        self._regs["a"] = self._regs["a"] & instr[0]
         self.unset_c()
         if (self._regs["a"] == 0):
             self.set_z()
@@ -848,6 +1089,17 @@ class Emulator:
         else:
             self.unset_z()
 
+    def logic_or_n8(self) -> None:
+        if (self._verbose):
+            print("or n8")
+        instr = self.fetch_operands(1)
+        self._regs["a"] = self._regs["a"] | instr[0]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
     def logic_xor(self, reg: str) -> None:
         if (self._verbose):
             print(f"xor a, {reg}")
@@ -862,6 +1114,17 @@ class Emulator:
         if (self._verbose):
             print("xor a, [hl]")
         self._regs["a"] = self._regs["a"] ^ self._mem[self.get_16_bit_reg_val("hl")]
+        self.unset_c()
+        if (self._regs["a"] == 0):
+            self.set_z()
+        else:
+            self.unset_z()
+
+    def logic_xor_n8(self) -> None:
+        if (self._verbose):
+            print("xor n8")
+        instr = self.fetch_operands(1)
+        self._regs["a"] = self._regs["a"] ^ instr[0]
         self.unset_c()
         if (self._regs["a"] == 0):
             self.set_z()
@@ -933,6 +1196,29 @@ class Emulator:
             self.set_z()
         else:
             self.unset_z()
+
+    def swap(self, reg: str) -> None:
+        if (self._verbose):
+            print(f"swap {reg}")
+        val = self._regs[reg]
+        most_sig = val >> 4
+        least_sig = val << 4 % 256
+        self._regs[reg] = most_sig | least_sig
+
+    def swap_mem_hl(self) -> None:
+        if (self._verbose):
+            print("swap [hl]")
+        addr = self.get_16_bit_reg_val("hl")
+        val = self._mem[addr]
+        most_sig = val >> 4
+        least_sig = val << 4 % 256
+        self._mem[addr] = most_sig | least_sig
+
+    def reti(self) -> None:
+        if (self._verbose):
+            print("reti")
+        self.enable_interrupts()
+        self.ret()
 
 
 def read_rom(file_name: str, verbose: bool = False) -> list[int]:
