@@ -430,6 +430,8 @@ class Emulator:
         self._isa[0X28] = self.jr_z
         self._isa[0X30] = self.jr_nc
         self._isa[0X38] = self.jr_c
+
+        self._isa[0X2F] = self.cpl
             
     def run(self) -> None:
         while True:
@@ -444,9 +446,6 @@ class Emulator:
         return self._isa[opcode]
 
     def fetch(self) -> int:
-        print()
-        print(self._regs["a"])
-        print()
         pc = self._regs["pc"]
 
         if self._verbose:
@@ -505,14 +504,17 @@ class Emulator:
     def c_is_set(self) -> bool:
         return (self._regs["f"] & 0B00010000) != 0
     
+    #Takes the name of a 16 bit reg and returns it's value by combining the two 8 bit regs it is compossed of
     def get_16_bit_reg_val(self, reg:str) -> int:
         return self._regs[reg[0]] << 8 | self._regs[reg[1]]
     
+    #Takes a 16 bit integer, and returns it's value as two 8 bit integers
     def convert_16_val_to_two_8_bit_vals(self, val: int) -> tuple[int, int]:
         val_0 = val >> 8
         val_1 = val & 0XFF
         return val_0, val_1
     
+    #Takes an unsigned integer and returns it's value as a signed integers encoded with two's compliment
     def convert_unsigned_to_signed(self, val: int) -> int:
         if (val < 128):
             return val
@@ -1219,6 +1221,11 @@ class Emulator:
             print("reti")
         self.enable_interrupts()
         self.ret()
+
+    def cpl(self) -> None:
+        if (self._verbose):
+            print("cpl")
+        self._regs["a"] = self._regs["a"] ^ 0B11111111
 
 
 def read_rom(file_name: str, verbose: bool = False) -> list[int]:
